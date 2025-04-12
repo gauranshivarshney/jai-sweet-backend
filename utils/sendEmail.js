@@ -24,7 +24,6 @@ export const sendOrderEmail = async (order) => {
         <p><strong>Total:</strong> Rs. ${order.amount}</p>
         <p><strong>Phone:</strong> ${order.phone}</p>
         <p><strong>Address:</strong> ${order.address}</p>
-        <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
       `,
     };
 
