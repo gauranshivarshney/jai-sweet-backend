@@ -3,6 +3,7 @@ import userModel from '../models/userModel.js'
 import express from 'express'
 import Razorpay from 'razorpay'
 import { authMiddleware } from '../middleware/auth.js'
+import { sendOrderEmail } from '../utils/sendEmail.js'
 
 const orderRouter = express.Router()
 
@@ -15,7 +16,7 @@ orderRouter.get('/list', async (req, res) => {
     try{
         const orders = await Order.find({})
         .populate('userId', 'name')
-        .select('products address phone amount')
+        .select('userId products address phone amount status')
         res.json({
             success: true,
             data: orders
@@ -52,7 +53,7 @@ orderRouter.delete('/:id', async (req, res) => {
 
 orderRouter.post('/create', async (req, res) => {
     try{
-        const {userId, name, phone, address, amount, paymentId, products} = req.body
+        const {userId, name, phone, address, amount, paymentId, products, status, category, subcategory} = req.body
 
         if(!products || products.length === 0){
             return res.status(400).json({
@@ -61,6 +62,17 @@ orderRouter.post('/create', async (req, res) => {
             })
         }
 
+        const productsWithDetails = products.map(product => ({
+            productId: product.id,
+            name: product.name,
+            price: product.price,
+            quantity: product.quantity,
+            weight: product.weight,
+            image: product.image,
+            category: product.category,
+            subcategory: product.subcategory
+        }))
+
         let order = new Order({
             userId,
             name,
@@ -68,14 +80,16 @@ orderRouter.post('/create', async (req, res) => {
             address,
             amount,
             paymentId,
-            products,
-            status: 'Food Processing',
+            products: productsWithDetails,
+            status: status,
             paymentStatus: 'Completed',
             date: new Date()
         })
         const savedOrder = await order.save()
         await userModel.findByIdAndUpdate(userId, {cartItems: {}})
         res.status(201).json(savedOrder)
+        await sendOrderEmail(savedOrder)
+
     }
     catch(error){
         console.log(error)
@@ -126,7 +140,7 @@ orderRouter.post('/userOrders', authMiddleware, async (req, res) => {
 
 orderRouter.post('/status', async (req, res) => {
     try{
-        await Order.findByIdAndUpdate(req.body.orderId, {status: req.body.status})
+        await Order.findByIdAndUpdate(req.body.orderId, {status: req.body.status}, {new: true})
         res.json({
             success: true,
             message: "Status updated"

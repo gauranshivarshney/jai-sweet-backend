@@ -34,7 +34,9 @@ export const orderSchema = mongoose.Schema({
             },
             name: String,
             quantity: Number,
-            price: Number
+            price: Number,
+            category: String,
+            subcategory: String
         }
     ],
     status: {
