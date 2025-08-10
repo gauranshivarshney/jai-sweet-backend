@@ -9,14 +9,15 @@ const mailerSend = new MailerSend({
 
 export const sendOrderEmail = async (order) => {
   try {
-    const { _id, name, phone, address, amount, products } = order;
+    const { _id, name, phone, address, amount, products, email } = order;
 
     const sentFrom = new Sender(process.env.MAILERSEND_FROM_EMAIL, "Gauranshi Jai Sweet");
-    const recipients = [new Recipient(process.env.ADMIN_EMAIL, "Admin")];
 
-    const emailParams = new EmailParams()
+    const adminRecipients = [new Recipient(process.env.ADMIN_EMAIL, "Admin")];
+
+    const adminEmailParams = new EmailParams()
       .setFrom(sentFrom)
-      .setTo(recipients)
+      .setTo(adminRecipients)
       .setSubject("New Order Received")
       .setHtml(`
         <h1>New Order Received</h1>
@@ -45,8 +46,28 @@ export const sendOrderEmail = async (order) => {
         Total Amount: ₹${amount}
       `);
 
-    await mailerSend.email.send(emailParams);
-    console.log("Order notification email sent successfully");
+    if(email){
+      const customerRecipients = [new Recipient(email, name)];
+      const customerEmailParams = new EmailParams()
+        .setFrom(sentFrom)
+        .setTo(customerRecipients)
+        .setSubject("Your Ordet Confirmation")
+        .setHtml(`
+          <h1>Thank you for your order!</h1>
+          <p>Your order has been received successfully.</p>
+          <p><strong>Total Amount:</strong> ₹${amount}</p>
+          <p>We'll contact you once your order is ready for delivery.</p>
+          `)
+          .setText(`
+            Thank you for your order!
+            Total Amount: ₹${amount}
+            We'll contact you once your order is ready.
+            `)
+        
+      await mailerSend.email.send(customerEmailParams);
+    }
+
+    await mailerSend.email.send(adminEmailParams)
   } catch (error) {
     console.error("Failed to send order notification email:", error);
     if (error.body) {
